@@ -41,25 +41,32 @@ def load_data():
     try:
         df = pd.read_sql("SELECT * FROM forecasts", conn)
         
-        # 數值轉換
+        # 1. 數值轉換：將字串轉為數字，以便地圖上色
         df['min_temp'] = pd.to_numeric(df['min_temp'])
         df['max_temp'] = pd.to_numeric(df['max_temp'])
         df['rain_prob'] = pd.to_numeric(df['rain_prob'])
         
-        # --- 關鍵修正：解決地圖空白問題 ---
-        # 1. 統一將氣象局的「臺」轉為地圖檔常用的「台」
-        #    這會解決：臺北市、臺中市、臺南市、臺東縣
+        # 2. 名稱修正：解決地圖空白問題
+        # (A) 統一將氣象局的「臺」轉為地圖檔常用的「台」 (解決 臺北、臺中、臺南、臺東)
         df['location'] = df['location'].str.replace('臺', '台')
 
-        # 2. 處理行政區升格 (2010年地圖 vs 2025年資料)
-        #    氣象局資料是「新資料」，地圖是「舊資料」，需要手動對應
+        # (B) 處理 2010 年舊地圖的行政區名稱 (解決 新北->台北縣, 桃園市->桃園縣)
         county_mapping = {
-            '桃園市': '桃園縣',  # 2014年升格
-            '新北市': '台北縣',  # 2010年底升格 (地圖檔可能還是台北縣)
-            '高雄市': '高雄市'   # 高雄通常不需要改，但若地圖分高雄縣/市，這裡只能對應到市中心
+            '桃園市': '桃園縣',
+            '新北市': '台北縣',
+            # 針對 2010 年圖資，台中/台南/高雄 其實分縣與市，這裡我們先對應到「市」
+            # 這樣至少市中心會有顏色
         }
         df['location'] = df['location'].replace(county_mapping)
 
+        # 3. 建立 Hover 資訊 (這就是原本漏掉的關鍵部分！)
+        df['hover_info'] = (
+            "天氣: " + df['weather_condition'] + "<br>" +
+            "氣溫: " + df['min_temp'].astype(str) + "°C - " + df['max_temp'].astype(str) + "°C<br>" +
+            "降雨機率: " + df['rain_prob'].astype(str) + "%<br>" +
+            "舒適度: " + df['comfort_index']
+        )
+        
         return df
     except Exception as e:
         st.error(f"讀取資料庫失敗: {e}")
