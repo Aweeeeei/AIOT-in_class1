@@ -52,7 +52,6 @@ def load_data():
             '臺北市': '台北市',
             '臺中市': '台中市',
             '臺南市': '台南市',
-            '臺東市': '台東市',
         }
         df['location'] = df['location'].replace(county_mapping)
         # # 2. 名稱修正：解決地圖空白問題
