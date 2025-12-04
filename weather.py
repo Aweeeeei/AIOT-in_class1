@@ -98,7 +98,7 @@ def main():
     # 設定顏色參數
     if color_metric == "最高溫 (MaxT)":
         color_col = "max_temp"
-        color_scale = "RdOr"
+        color_scale = "OrRd"
         label_legend = "最高溫 (°C)"
     else:
         color_col = "rain_prob"
