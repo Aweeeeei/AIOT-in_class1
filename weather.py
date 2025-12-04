@@ -46,7 +46,15 @@ def load_data():
         df['max_temp'] = pd.to_numeric(df['max_temp'])
         df['rain_prob'] = pd.to_numeric(df['rain_prob'])
         
-        df['location'] = df['location'].replace({'桃園市': '桃園縣'})
+        # df['location'] = df['location'].replace({'桃園市': '桃園縣'})
+        county_mapping = {
+            '桃園市': '桃園縣',
+            '臺北市': '台北市',
+            '臺中市': '台中市',
+            '臺南市': '台南市',
+            '臺東市': '台東市',
+        }
+        df['location'] = df['location'].replace(county_mapping)
         # # 2. 名稱修正：解決地圖空白問題
         # # (A) 統一將氣象局的「臺」轉為地圖檔常用的「台」 (解決 臺北、臺中、臺南、臺東)
         # df['location'] = df['location'].str.replace('臺', '台')
