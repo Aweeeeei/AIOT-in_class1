@@ -46,18 +46,19 @@ def load_data():
         df['max_temp'] = pd.to_numeric(df['max_temp'])
         df['rain_prob'] = pd.to_numeric(df['rain_prob'])
         
-        # 2. 名稱修正：解決地圖空白問題
-        # (A) 統一將氣象局的「臺」轉為地圖檔常用的「台」 (解決 臺北、臺中、臺南、臺東)
-        df['location'] = df['location'].str.replace('臺', '台')
+        df['location'] = df['location'].replace({'桃園市': '桃園縣'})
+        # # 2. 名稱修正：解決地圖空白問題
+        # # (A) 統一將氣象局的「臺」轉為地圖檔常用的「台」 (解決 臺北、臺中、臺南、臺東)
+        # df['location'] = df['location'].str.replace('臺', '台')
 
-        # (B) 處理 2010 年舊地圖的行政區名稱 (解決 新北->台北縣, 桃園市->桃園縣)
-        county_mapping = {
-            '桃園市': '桃園縣',
-            '新北市': '台北縣',
-            # 針對 2010 年圖資，台中/台南/高雄 其實分縣與市，這裡我們先對應到「市」
-            # 這樣至少市中心會有顏色
-        }
-        df['location'] = df['location'].replace(county_mapping)
+        # # (B) 處理 2010 年舊地圖的行政區名稱 (解決 新北->台北縣, 桃園市->桃園縣)
+        # county_mapping = {
+        #     '桃園市': '桃園縣',
+        #     '新北市': '台北縣',
+        #     # 針對 2010 年圖資，台中/台南/高雄 其實分縣與市，這裡我們先對應到「市」
+        #     # 這樣至少市中心會有顏色
+        # }
+        # df['location'] = df['location'].replace(county_mapping)
 
         # 3. 建立 Hover 資訊 (這就是原本漏掉的關鍵部分！)
         df['hover_info'] = (
