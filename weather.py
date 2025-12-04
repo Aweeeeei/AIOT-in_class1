@@ -41,29 +41,25 @@ def load_data():
     try:
         df = pd.read_sql("SELECT * FROM forecasts", conn)
         
-        # 1. 數值轉換
+        # 1. 數值轉換：將字串轉為數字，以便地圖上色
         df['min_temp'] = pd.to_numeric(df['min_temp'])
         df['max_temp'] = pd.to_numeric(df['max_temp'])
         df['rain_prob'] = pd.to_numeric(df['rain_prob'])
         
-        # 2. 處理「臺」與「台」的通用規則 (先執行這個)
-        #    這會把「臺北市」變成「台北市」，符合地圖檔的命名
+        # 2. 名稱修正：解決地圖空白問題
+        # (A) 統一將氣象局的「臺」轉為地圖檔常用的「台」 (解決 臺北、臺中、臺南、臺東)
         df['location'] = df['location'].str.replace('臺', '台')
 
-        # 3. 特殊縣市對應 (再執行這個，覆蓋上面的規則)
-        #    針對 2010 年地圖檔的特殊命名進行強制對應
+        # (B) 處理 2010 年舊地圖的行政區名稱 (解決 新北->台北縣, 桃園市->桃園縣)
         county_mapping = {
-            '新北市': '臺北縣',  # 修正：地圖檔的台北縣是用「臺」
             '桃園市': '桃園縣',
-            '台中市': '臺中市',  # 嘗試修正：若地圖的縣是用臺，這裡強制轉回臺
-            '台南市': '臺南市',  # 嘗試修正：同上
-            '高雄市': '高雄市'   
+            '新北市': '臺北縣',
+            # 針對 2010 年圖資，台中/台南/高雄 其實分縣與市，這裡我們先對應到「市」
+            # 這樣至少市中心會有顏色
         }
-        
-        # 使用 replace 進行替換 (若字典裡沒有的就不會變)
         df['location'] = df['location'].replace(county_mapping)
 
-        # 4. 建立 Hover 資訊
+        # 3. 建立 Hover 資訊 (這就是原本漏掉的關鍵部分！)
         df['hover_info'] = (
             "天氣: " + df['weather_condition'] + "<br>" +
             "氣溫: " + df['min_temp'].astype(str) + "°C - " + df['max_temp'].astype(str) + "°C<br>" +
