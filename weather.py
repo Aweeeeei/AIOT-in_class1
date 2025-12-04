@@ -46,18 +46,20 @@ def load_data():
         df['max_temp'] = pd.to_numeric(df['max_temp'])
         df['rain_prob'] = pd.to_numeric(df['rain_prob'])
         
-        # --- 關鍵修正：名稱對應 ---
-        # 氣象局資料是「桃園市」，但 2010 年的地圖檔是「桃園縣」
-        # 若不修正，桃園會變成灰色的
-        df['location'] = df['location'].replace({'桃園市': '桃園縣'})
+        # --- 關鍵修正：解決地圖空白問題 ---
+        # 1. 統一將氣象局的「臺」轉為地圖檔常用的「台」
+        #    這會解決：臺北市、臺中市、臺南市、臺東縣
+        df['location'] = df['location'].str.replace('臺', '台')
 
-        # 建立 Hover 資訊
-        df['hover_info'] = (
-            "天氣: " + df['weather_condition'] + "<br>" +
-            "氣溫: " + df['min_temp'].astype(str) + "°C - " + df['max_temp'].astype(str) + "°C<br>" +
-            "降雨機率: " + df['rain_prob'].astype(str) + "%<br>" +
-            "舒適度: " + df['comfort_index']
-        )
+        # 2. 處理行政區升格 (2010年地圖 vs 2025年資料)
+        #    氣象局資料是「新資料」，地圖是「舊資料」，需要手動對應
+        county_mapping = {
+            '桃園市': '桃園縣',  # 2014年升格
+            '新北市': '台北縣',  # 2010年底升格 (地圖檔可能還是台北縣)
+            '高雄市': '高雄市'   # 高雄通常不需要改，但若地圖分高雄縣/市，這裡只能對應到市中心
+        }
+        df['location'] = df['location'].replace(county_mapping)
+
         return df
     except Exception as e:
         st.error(f"讀取資料庫失敗: {e}")
