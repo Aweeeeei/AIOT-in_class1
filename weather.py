@@ -2,7 +2,6 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import plotly.express as px
-import json
 import requests
 from datetime import datetime
 
@@ -10,15 +9,13 @@ from datetime import datetime
 st.set_page_config(page_title="台灣天氣地圖", layout="wide")
 st.title("🗺️ 台灣各地天氣預報地圖")
 
-# --- 1. 取得台灣縣市 GeoJSON (修正版) ---
+# --- 1. 取得台灣縣市 GeoJSON ---
 @st.cache_data
 def get_taiwan_geojson():
-    # 改用 g0v 的 GeoJSON (2010年縣市界)
-    # 檔案大小約 8MB，第一次載入會稍久，cache_data 會幫忙快取
     url = "https://raw.githubusercontent.com/g0v/twgeojson/master/json/twCounty2010.geo.json"
     try:
         response = requests.get(url)
-        response.raise_for_status() # 檢查 404
+        response.raise_for_status()
         geojson = response.json()
         return geojson
     except Exception as e:
@@ -41,12 +38,12 @@ def load_data():
     try:
         df = pd.read_sql("SELECT * FROM forecasts", conn)
         
-        # 1. 數值轉換：將字串轉為數字，以便地圖上色
+        # 1. 數值轉換
         df['min_temp'] = pd.to_numeric(df['min_temp'])
         df['max_temp'] = pd.to_numeric(df['max_temp'])
         df['rain_prob'] = pd.to_numeric(df['rain_prob'])
         
-        # 2. 名稱修正：解決地圖空白問題
+        # 2. 名稱修正
         county_mapping = {
             '桃園市': '桃園縣',
             '臺北市': '台北市',
@@ -56,7 +53,7 @@ def load_data():
         }
         df['location'] = df['location'].replace(county_mapping)
 
-        # 3. 建立 Hover 資訊 (這就是原本漏掉的關鍵部分！)
+        # 3. 建立 Hover 資訊
         df['hover_info'] = (
             "天氣: " + df['weather_condition'] + "<br>" +
             "氣溫: " + df['min_temp'].astype(str) + "°C - " + df['max_temp'].astype(str) + "°C<br>" +
@@ -115,8 +112,8 @@ def main():
     fig = px.choropleth_mapbox(
         df_filtered,
         geojson=geojson,
-        locations='location',           # DataFrame 的地名
-        featureidkey="properties.COUNTYNAME", # g0v GeoJSON 的地名 Key 是 COUNTYNAME
+        locations='location',
+        featureidkey="properties.COUNTYNAME",
         color=color_col,
         color_continuous_scale=color_scale,
         range_color=(df[color_col].min(), df[color_col].max()),
@@ -126,26 +123,19 @@ def main():
         opacity=0.7,
         labels={color_col: label_legend},
         hover_name='location',
+        
+        # --- 關鍵修改 1: 只傳入我們組好的 hover_info ---
+        # 這樣 customdata[0] 就一定會是 hover_info 的內容
         hover_data={
-            'location': False,
-            color_col: False,
-            'start_time': False,
-            'end_time': False,
-            'weather_condition': True,
-            'min_temp': True,
-            'max_temp': True,
-            'rain_prob': True,
-            'comfort_index': True,
-            'hover_info': False # 不顯示這個輔助欄位
+            'hover_info': True,
+            color_col: False # 確保顏色欄位不要干擾顯示
         }
     )
 
+    # --- 關鍵修改 2: 直接讀取 customdata[0] ---
+    # 因為 hover_data 只傳入了一個我們需要的欄位，所以索引 [0] 絕對正確
     fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>" +
-                      "天氣: %{customdata[0]}<br>" +
-                      "氣溫: %{customdata[1]}°C - %{customdata[2]}°C<br>" +
-                      "降雨機率: %{customdata[3]}%<br>" +
-                      "舒適度: %{customdata[4]}"
+        hovertemplate="<b>%{hovertext}</b><br>%{customdata[0]}"
     )
     
     fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
